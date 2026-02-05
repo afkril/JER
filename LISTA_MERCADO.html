@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Mercado Regionales</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+	/* VARIABLES DE COLOR DINÁMICAS */
+    .reg-neiva { 
+        --reg-color-principal: #2980b9; 
+        --reg-color-oscuro: #1a5276;
+        --reg-bg-suave: #e3f2fd; 
+        --reg-glow: rgba(41, 128, 185, 0.3);
+    }
+    .reg-gaitana { 
+        --reg-color-principal: #27ae60; 
+        --reg-color-oscuro: #1e8449;
+        --reg-bg-suave: #e8f5e9; 
+        --reg-glow: rgba(39, 174, 96, 0.3);
+    }
+	
+	/* Cambio de fondo según regional */
+    body.reg-neiva { background-image: radial-gradient(#1a5276 10%, transparent 10%); background-size: 20px 20px; }
+    body.reg-gaitana { background-image: radial-gradient(#1e8449 10%, transparent 10%); background-size: 20px 20px; }
+	
+	
+        /* (Se mantienen todos tus estilos originales) */
+        .sidebar-filters { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+        .filter-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid white; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; position: relative; }
+        .filter-btn:hover { transform: scale(1.1); }
+        .filter-btn.off { background-color: #ccc !important; opacity: 0.5; filter: grayscale(1); }
+        .filter-btn::after { content: attr(data-label); position: absolute; right: 50px; background: #333; color: white; padding: 1px 2px; border-radius: 4px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .filter-btn:hover::after { opacity: 1; }
+        @media print { .sidebar-filters { display: none; } }
+        :root { --color-granos: #e67e22; --color-proteinas: #e74c3c; --color-lacteos: #3498db; --color-panaderia: #8e44ad; --color-verduras: #27ae60; --color-frutas: #f1c40f; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 10px; background-color: #0b0e14; background-image: radial-gradient(#222 10%, transparent 10%); background-size: 15px 15px; background-attachment: fixed; font-size: 12px; color: #0b0e14; }
+        <!-- .container { max-width: 950px; margin: auto; background: white; padding: 2px; border-radius: 5px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); } -->
+        .container { max-width: 950px; margin: auto; background: white; padding: 8px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+		
+		
+		h2 { text-align: center; margin-bottom: 20px; color: #333; }
+		
+		/* Estilo para la caja del título */
+		#titulo-regional {
+			padding: 1px;
+			border-radius: 8px;
+			margin-top: 2px;
+			text-align: center;
+			font-weight: 600;
+			letter-spacing: -0.5px;
+			transition: all 0.6s ease; /* Transición suave de color */
+			
+			/* Fondo suave dinámico */
+			background: var(--reg-bg-soft);
+			border: 2px solid rgba(255, 255, 255, 0.2);
+			color: var(--reg-color); /* El texto toma el color fuerte de la regional */
+			text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+			box-shadow: 0 88px 15px rgba(0,0,0,0.05);
+		}
+
+		<!-- /* Definición de colores elegantes y suaves */
+		.reg-neiva { 
+			--reg-color: #2980b9; 
+			--reg-glow: rgba(41, 128, 185, 0.2); 
+			--reg-bg-soft: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); /* Azul cielo suave */
+		}
+
+		.reg-gaitana { 
+			--reg-color: #27ae60; 
+			--reg-glow: rgba(39, 174, 96, 0.2); 
+			--reg-bg-soft: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); /* Verde pastel suave */
+		} -->
+        
+		
+		.config-section { display: flex; gap: 15px; flex-wrap: wrap; background: #fafafa; padding: 3px; border-radius: 4px; border: 1px solid #eee; margin-bottom: 15px; align-items: center; }
+        .dias-container { display: flex; gap: 5px; }
+        .dia-item { font-size: 11px; background: white; padding: 3px 4px; border: 1px solid #ddd; border-radius: 3px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        <!-- th { background: #333; color: white; padding: 4px; text-align: left; font-size: 11px; } -->
+        <!-- td { padding: 4px 5px; border-bottom: 1px solid #eee; position: relative; } -->
+		
+		/* TABLAS */
+			th { background: var(--reg-color-oscuro) !important; color: white; padding: 2px; }
+			tr:hover { background-color: var(--reg-bg-suave); }
+	
+        .color-tag { width: 4px; height: 100%; position: absolute; left: 0; top: 0; }
+        .cat-granos { background-color: var(--color-granos); }
+        .cat-proteinas { background-color: var(--color-proteinas); }
+        .cat-lacteos { background-color: var(--color-lacteos); }
+        .cat-panaderia { background-color: var(--color-panaderia); }
+        .cat-verduras { background-color: var(--color-verduras); }
+        .cat-frutas { background-color: var(--color-frutas); }
+        
+		
+		/* BOTONES ADAPTATIVOS */
+		
+		.input-entrega { 
+			border: 1 solid var(--reg-color-principal); 
+			border-radius: 4px; 
+			transition: all 0.3s;
+		}
+		
+		
+		<!-- .input-entrega { width: 90%; padding: 0px 1px; height: 18px; font-size: 11px; border: 1px solid #3498db; border-radius: 4px; text-align: center; font-weight: bold; outline: none; } -->
+        .redondeo-badge { background: #e8f4fd; color: #2b5a83; padding: 2px 3px; border-radius: 3px; font-weight: bold; border: 1px solid #d1e3f0; }
+        .val-unitario { color: #666; font-style: italic; font-size: 11px; }
+        .btn { padding: 2px 3px; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; }
+        .btn-gen { background: #28a745; color: white; }
+        .btn-pdf { background: #dc3545; color: white; margin-left: 5px; }
+        .btn-export { padding: 4px 8px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer; margin: 2px; }
+        .btn-excel { background: #1f7244; color: white; }
+        
+		
+		/* Contenedor con acabado de Cristal Elegante */
+	/* SELECTOR DE REGIONAL */
+    .regional-selector {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        border-left: 12px solid var(--reg-color-principal);
+        padding: 3px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border-radius: 4px;
+    }
+
+    .select-styled {
+        background: var(--reg-color-principal);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        border: none;
+        font-weight: bold;
+    }
+
+/* Etiquetas de texto internas */
+.selector-label {
+    color: #181818;
+    font-size: 13px;
+	
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 300;
+    opacity: 0.9;
+	
+}
+
+/* El Select con estilo de barra de navegación */
+.select-styled {
+    background: transparent;
+    color: white;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    padding: 2px 3px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.select-styled:hover {
+    border-bottom-color: var(--reg-color);
+}
+
+/* Variantes de color Formales */
+.reg-neiva { 
+    --reg-color: #2980b9; 
+    --reg-glow: rgba(41, 128, 185, 0.2); 
+}
+.reg-gaitana { 
+    --reg-color: #27ae60; 
+    --reg-glow: rgba(39, 174, 96, 0.2); 
+}
+
+/* Sombra proyectada en el título para legibilidad */
+#titulo-regional {
+    text-shadow: 20px 20px 40px rgba(0,0,0,0.3);
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+		
+		select.select-styled { padding: 1px; border-radius: 1px; border: 2px solid white; background: #2980b9; color: white; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="printable-area">
+    <div class="regional-selector no-pdf reg-neiva" id="barra-regional">
+		<span class="selector-label">Seleccionar Regional: </span>
+		<select id="regional-choice" class="select-styled" onchange="cambiarRegional()">
+			<option value="neiva">Regional Neiva</option>
+			<option value="gaitana">Regional Gaitana</option>
+		</select>
+	</div>
+
+    
+	<h2 id="titulo-regional" class="reg-neiva">📋 Lista de Mercado Regional Neiva</h2>
+
+    <div class="config-section no-pdf">
+        <div>
+            Cant. Niños: 
+            <input type="number" id="num-p" value="13" min="1" max="100" style="width: 50px; padding: 1px; outline: none; border: 1px solid #3498db; border-radius: 3px;">
+        </div>
+        <div>
+            Semana: 
+            <select id="sem" style="padding: 1px;">
+                <option value="1">1 (M1-5)</option>
+                <option value="2">2 (M6-10)</option>
+                <option value="3">3 (M11-15)</option>
+                <option value="4">4 (M16-20)</option>
+                <option value="5">5 (M21-25)</option>
+            </select>
+        </div>
+        <div class="dias-container">
+            <label class="dia-item"><input type="checkbox" class="d-ch" value="1"> Lun</label>
+            <label class="dia-item"><input type="checkbox" class="d-ch" value="2"> Mar</label>
+            <label class="dia-item"><input type="checkbox" class="d-ch" value="3"> Mié</label>
+            <label class="dia-item"><input type="checkbox" class="d-ch" value="4"> Jue</label>
+            <label class="dia-item"><input type="checkbox" class="d-ch" value="5"> Vie</label>
+        </div>
+        <button class="btn btn-gen" onclick="generar()">Calcular Lista</button>
+        
+        <div class="sidebar-filters no-pdf">
+            <div class="filter-btn" data-cat="granos" data-label="granos" style="background-color: var(--color-granos);" onclick="toggleCategory(this, 'granos')"></div>
+            <div class="filter-btn" data-cat="lacteos" data-label="lacteos" style="background-color: var(--color-lacteos);" onclick="toggleCategory(this, 'lacteos')"></div>
+            <div class="filter-btn" data-cat="proteinas" data-label="proteinas" style="background-color: var(--color-proteinas);" onclick="toggleCategory(this, 'proteinas')"></div>
+            <div class="filter-btn" data-cat="verduras" data-label="verduras" style="background-color: var(--color-verduras);" onclick="toggleCategory(this, 'verduras')"></div>
+            <div class="filter-btn" data-cat="frutas" data-label="frutas" style="background-color: var(--color-frutas);" onclick="toggleCategory(this, 'frutas')"></div>
+            <div class="filter-btn" data-cat="panaderia" data-label="panaderia" style="background-color: var(--color-panaderia);" onclick="toggleCategory(this, 'panaderia')"></div>
+        </div>
+       
+        <div class="actions no-export">
+            <button class="btn-export btn-excel" onclick="exportExcel()">📊 Excel</button>
+            <button class="btn-export btn-pdf" onclick="exportPDF()">📄 PDF</button>
+            <button class="btn" style="background:#666; color:white;" onclick="limpiar()">🗑️ Limpiar</button>
+        </div>
+    </div>
+
+    <div id="resultado"></div>
+</div>
+
+<script>
+    const memoriaEntrega = JSON.parse(localStorage.getItem('datosEntregaMultiregional')) || {};
+
+    const ORDEN_CATEGORIAS = { "granos": 1, "lacteos": 2, "proteinas": 3, "verduras": 4, "frutas": 5, "panaderia": 6, "otros": 7 };
+
+    // ESTRUCTURA DE REGIONALES
+    const regionales = {
+        neiva: {
+            titulo: "Regional Neiva",
+            db: [
+			  { n: "Aceite de soya", c: "granos", u: "ml", g: { m1: 13, m2: 14, m3: 15, m4: 14, m5: 14, m6: 15, m7: 14, m8: 15, m9: 14, m10: 13, m11: 14, m12: 18, m13: 10, m14: 10, m15: 12, m16: 14, m17: 14, m18: 14, m19: 14, m20: 13, m21: 15, m22: 11, m23: 15, m24: 26 } },
+			  { n: "Arroz", c: "granos", u: "gr", g: { m1: 23, m2: 23, m3: 46, m4: 23, m5: 48, m6: 23, m7: 23, m8: 0, m9: 48, m10: 23, m11: 23, m12: 23, m13: 23, m14: 25, m15: 48, m16: 23, m17: 23, m18: 23, m19: 23, m20: 23, m21: 23, m22: 23, m23: 23, m24: 73 } },
+			  { n: "Arveja seca", c: "granos", u: "gr", g: { m1: 0, m2: 10, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 10, m10: 0, m11: 0, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 10, m21: 0, m22: 0, m23: 0, m24: 0 } },
+			  { n: "Avena en hojuelas", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 10, m7: 0, m8: 0, m9: 0, m10: 0, m11: 0, m12: 10, m13: 0, m14: 10, m15: 0, m16: 0, m17: 0, m18: 10, m19: 10, m20: 0, m21: 10, m22: 0, m23: 0, m24: 10 } },
+			  { n: "Azúcar", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 6, m11: 0, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 0 } },
+			  { n: "Cebada", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 10, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0, m11: 0, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 0 } },
+			  { n: "Cuchuco de trigo ", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0, m11: 0, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 15, m23: 0, m24: 0 } },
+			  { n: "Frijol", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 10, m5: 0, m6: 0, m7: 10, m8: 0, m9: 0, m10: 0, m11: 10, m12: 0, m13: 0, m14: 0, m15: 0, m16: 10, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 10, m24: 0 } },
+			  { n: "Harina de maíz ", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 25, m4: 25, m5: 0, m6: 25, m7: 0, m8: 0, m9: 0, m10: 25, m11: 0, m12: 0, m13: 0, m14: 0, m15: 25, m16: 0, m17: 25, m18: 25, m19: 25, m20: 25, m21: 0, m22: 0, m23: 25, m24: 0 } },
+			  { n: "Harina de trigo ", c: "granos", u: "gr", g: { m1: 0, m2: 30, m3: 10, m4: 0, m5: 0, m6: 0, m7: 0, m8: 2, m9: 0, m10: 2, m11: 0, m12: 25, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 25, m21: 25, m22: 0, m23: 30, m24: 0 } },
+			  { n: "Lenteja", c: "granos", u: "gr", g: { m1: 10, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 10, m8: 0, m9: 0, m10: 0, m11: 0, m12: 0, m13: 0, m14: 0, m15: 10, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 10 } },
+			  { n: "Panela", c: "granos", u: "gr", g: { m1: 0, m2: 6, m3: 6, m4: 6, m5: 6, m6: 6, m7: 6, m8: 6, m9: 6, m10: 0, m11: 6, m12: 6, m13: 6, m14: 6, m15: 6, m16: 6, m17: 6, m18: 6, m19: 6, m20: 6, m21: 6, m22: 6, m23: 0, m24: 0 } },
+			  { n: "Pasta sopa de letras", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0, m11: 0, m12: 2, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 0 } },
+			  { n: "Pasta Espaguetis", c: "granos", u: "gr", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 23, m9: 0, m10: 0, m11: 0, m12: 0, m13: 0, m14: 23, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 23 } },
+			  { n: "Pasta Fideos", c: "granos", u: "gr", g: { m1: 0, m2: 4, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 4, m10: 5, m11: 0, m12: 0, m13: 0, m14: 0, m15: 1, m16: 0, m17: 1, m18: 10, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 5 } },
+			  { n: "Sal", c: "granos", u: "gr", g: { m1: 3, m2: 3, m3: 3, m4: 3, m5: 3, m6: 3, m7: 3, m8: 3, m9: 3, m10: 3, m11: 3, m12: 3, m13: 3, m14: 3, m15: 3, m16: 3, m17: 3, m18: 3, m19: 3, m20: 3, m21: 3, m22: 3, m23: 3, m24: 3 } },
+			  { n: "Huevo", c: "proteinas", u: "und", g: { m1: 1.00, m2: 1.19, m3: 1.11, m4: 1.00, m5: 1.00, m6: 1.00, m7: 1.00, m8: 1.11, m9: 1.00, m10: 1.02, m11: 1.00, m12: 1.02, m13: 1.00, m14: 1.00, m15: 1.00, m16: 1.00, m17: 1.00, m18: 1.00, m19: 1.00, m20: 1.09, m21: 1.09, m22: 1.00, m23: 1.09, m24: 2.00 } },
+			  { n: "Pechuga", c: "proteinas", u: "GRS", g: { m1: 0, m2: 43.01, m3: 0, m4: 0, m5: 43.01, m6: 0, m7: 0, m8: 43.01, m9: 0, m10: 0, m11: 0, m12: 43.01, m13: 0, m14: 0, m15: 0, m16: 0, m17: 43.01, m18: 0, m19: 43.01, m20: 0, m21: 0, m22: 43.01, m23: 0, m24: 0 } },
+			  { n: "Queso", c: "proteinas", u: "GRS", g: { m1: 0, m2: 10, m3: 0, m4: 10, m5: 10, m6: 10, m7: 0, m8: 0, m9: 0, m10: 10, m11: 0, m12: 10, m13: 0, m14: 0, m15: 20, m16: 0, m17: 10, m18: 10, m19: 10, m20: 20, m21: 0, m22: 0, m23: 30, m24: 30 } },
+			  { n: "Carne de cerdo", c: "proteinas", u: "GRS", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 40, m7: 0, m8: 0, m9: 0, m10: 0, m11: 0, m12: 0, m13: 0, m14: 40, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 40 } },
+			  { n: "Carne de res", c: "proteinas", u: "GRS", g: { m1: 0, m2: 0, m3: 0, m4: 40, m5: 0, m6: 0, m7: 0, m8: 0, m9: 40, m10: 0, m11: 0, m12: 0, m13: 40, m14: 0, m15: 0, m16: 40, m17: 0, m18: 40, m19: 0, m20: 40, m21: 40, m22: 0, m23: 40, m24: 0 } },
+			  { n: "Carne de res molida", c: "proteinas", u: "GRS", g: { m1: 40, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 40, m8: 0, m9: 0, m10: 0, m11: 0, m12: 0, m13: 0, m14: 0, m15: 40, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 40 } },
+			  { n: "Tilapia ", c: "proteinas", u: "GRS", g: { m1: 0, m2: 0, m3: 64.52, m4: 10, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 64.52, m11: 0, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 0 } },
+			  { n: "Hígado ", c: "proteinas", u: "GRS", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0, m11: 40, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 0, m21: 0, m22: 0, m23: 0, m24: 0 } },
+			  { n: "Leche", c: "lacteos", u: "ml", g: { m1: 150, m2: 300, m3: 300, m4: 300, m5: 300, m6: 300, m7: 150, m8: 300, m9: 300, m10: 150, m11: 150, m12: 300, m13: 300, m14: 150, m15: 300, m16: 300, m17: 300, m18: 150, m19: 300, m20: 150, m21: 300, m22: 150, m23: 150, m24: 600 } },
+			  { n: "kumis", c: "lacteos", u: "und 150 cc", g: { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 0, m8: 0, m9: 0, m10: 0, m11: 1, m12: 0, m13: 0, m14: 0, m15: 0, m16: 0, m17: 0, m18: 0, m19: 0, m20: 1, m21: 0, m22: 1, m23: 0, m24: 0 } },
+			  { n: "yogurt", c: "lacteos", u: "und 150 cc", g: { m1: 1, m2: 0, m3: 0, m4: 0, m5: 0, m6: 0, m7: 1, m8: 0, m9: 0, m10: 1, m11: 0, m12: 0, m13: 0, m14: 1, m15: 0, m16: 0, m17: 0, m18: 1, m19: 0, m20: 0, m21: 0, m22: 0, m23: 1, m24: 0 } },
+			  { n: "Cucas ", c: "panaderia", u: "und", g: { m4: 1, m8: 1, m11: 1, m18: 1, m22: 1 } },
+			  { n: "Galletas dulces ", c: "panaderia", u: "und", g: { m6: 1, m13: 1, m16: 1 } },
+			  { n: "Mogolla", c: "panaderia", u: "und", g: { m1: 1, m7: 1, m9: 1, m12: 1, m13: 1, m16: 1  } },
+			  { n: "Pan de sal", c: "panaderia", u: "und", g: { m2: 1, m7: 1, m10: 1, m11: 1, m14: 1, m17: 1, m14: 1, m19: 1, m21: 1, m24: 1  } },
+			  { n: "aguacate", "c": "verduras", "u": "gr", "g": { "m13": 65.5, "m16": 19.48 } },
+			  { n: "ahuyama", "c": "verduras", "u": "gr", "g": { "m5": 116.67 } },
+			  { n: "ajo", "c": "verduras", "u": "gr", "g": { "m1": 2, "m2": 0.53, "m3": 0.53, "m4": 0.53, "m5": 1.53, "m6": 1, "m7": 0.53, "m8": 0.53, "m11": 1, "m12": 1.06, "m13": 0.53, "m14": 0.53, "m15": 1.05, "m16": 0.53, "m17": 0.53, "m18": 0.53, "m19": 0.53, "m20": 0.53, "m21": 0.53, "m22": 0.53, "m23": 1.06, "m24": 2.53 } },
+			  { n: "cebolla cabezona", "c": "verduras", "u": "gr", "g": { "m1": 7.26, "m2": 12.53, "m3": 6.32, "m4": 25.16, "m5": 21.06, "m6": 21.06, "m7": 2, "m8": 15.26, "m9": 5.26, "m11": 15, "m12": 10.53, "m13": 4.11, "m14": 14.53, "m15": 2, "m16": 4.11, "m17": 10, "m18": 3, "m19": 5.26, "m20": 9, "m22": 10.53, "m23": 6.21, "m24": 28.42 } },
+			  { n: "cebolla junca", "c": "verduras", "u": "gr", "g": { "m1": 10, "m2": 5, "m3": 15, "m4": 5, "m5": 5, "m6": 5, "m7": 2, "m8": 5, "m9": 7, "m10": 2.5, "m11": 2, "m12": 15, "m13": 2, "m14": 5, "m15": 2.5, "m16": 2.5, "m17": 2, "m18": 11.5, "m19": 5, "m20": 2, "m21": 5, "m22": 14.75, "m23": 5, "m24": 12.5 } },
+			  { n: "cilantro", "c": "verduras", "u": "gr", "g": { "m1": 3.33, "m2": 1.11, "m7": 1.11, "m9": 2.11, "m12": 2, "m13": 1, "m14": 1, "m15": 2.22, "m16": 1, "m18": 1.11, "m20": 2, "m22": 1.11, "m23": 1, "m24": 3.33 } },
+			  { n: "espinaca", "c": "verduras", "u": "gr", "g": { "m6": 83.33 } },
+			  { n: "habichuela", "c": "verduras", "u": "gr", "g": { "m5": 44.44, "m8": 16.67, "m11": 16.67, "m12": 5, "m17": 10.42,"m18": 4.44, "m19": 5, "m22": 8.88 } },
+			  { n: "lechuga", "c": "verduras", "u": "gr", "g": { "m1": 18.2, "m12": 18.18, "m19": 36.36, "m22": 18.18 } },
+			  { n: "papa criolla", "c": "verduras", "u": "gr", "g": { "m8": 30, "m15": 30, "m18": 106.3, "m22": 5.43 } },
+			  { n: "papa pastusa", "c": "verduras", "u": "gr", "g": { "m1": 46.7, "m2": 8.89, "m3": 33.33, "m5": 33.33, "m7": 46.66, "m9": 8.89, "m11": 30, "m14": 32.61, "m15": 13.33, "m18": 30, "m19": 30, "m20": 2, "m21": 33.33, "m23": 30, "m24": 46.66 } },
+			  { n: "pepino cohombro", "c": "verduras", "u": "gr", "g": { "m2": 20, "m9": 26.67, "m14": 20,"m15": 26.67, "m18": 26.67, "m20": 26.67, "m21": 20, "m23": 13.33, "m24": 20 } },
+			  { n: "pimenton rojo", "c": "verduras", "u": "gr", "g": { "m1": 5.9, "m2": 2, "m7": 2.24, "m9": 2, "m12": 1.18, "m15": 2.35, "m18": 2, "m20": 2.24, "m24": 2.35 } },
+			  { n: "platano maduro", "c": "verduras", "u": "gr", "g": { "m1": 34.7, "m2": 41.67, "m4": 41.67, "m6": 41.67, "m8": 34.72, "m10": 41.67, "m13": 41.67, "m20": 41.67, "m24": 41.67 } },
+			  { n: "platano verde", "c": "verduras", "u": "gr", "g": { "m4": 4.41, "m5": 36.76, "m12": 44.12, "m13": 4.41, "m16": 36.76, "m17": 44.12, "m22": 44.12, "m23": 4.41 } },
+			  { n: "remolacha", "c": "verduras", "u": "gr", "g": { "m24": 20 } },
+			  { n: "repollo", "c": "verduras", "u": "gr", "g": { "m3": 7.14, "m10": 14.29 } },
+			  { n: "tomate", c: "verduras", u: "gr", g: { m1: 18.8, m2: 18.75, m3: 26.25, m4: 30, m5: 25, m6: 18.75, m7: 38.75, m8: 21.25, m9: 25, m10: 12.5, m11: 10, m12: 36.25, m13: 5, m14: 35, m15: 34.2, m16: 17.65, m17: 3.75, m18: 31, m19: 31.25, m20: 32.5, m21: 25, m22: 30, m23: 32.5, m24: 68.75 } },
+			  { n: "yuca", "c": "verduras", "u": "gr", "g": { "m9": 37.5, "m9": 31.25 } },
+			  { n: "zanahoria", "c": "verduras", "u": "gr", "g": { "m1": 54.11, "m2": 4.71, "m3": 35.29, "m4": 2.35, "m7": 30.59,  "m8": 17.65, "m9": 4.71, "m10": 23.53, "m11": 17.65, "m12": 22.65, "m13": 3.53, "m15": 7.06, "m16": 3.75, "m17": 17.65, "m18": 3.53, "m19": 5, "m20": 2.35, "m22": 34.12,"m23": 14.11, "m24": 30.59} },
+			  { n: "Banano", c: "frutas", u: "gr", g: { m1: 85.71, m2: 57.14, m5: 85.71, m6: 85.71, m7: 85.71, m8: 28.57, m11: 85.71, m12: 28.57, m13: 85.71, m16: 85.71, m17: 85.71, m21: 85.71, m23: 85.71, m24: 28.57 } },
+			  { n: "Fresa", c: "frutas", u: "gr", g: { m1: 21.05, m3: 21.05 } },
+			  { n: "Guayaba", c: "frutas", u: "gr", g: { m19: 26.67 } },
+			  { n: "Limón", c: "frutas", u: "gr", g: { m1: 4, m2: 5, m3: 6, m4: 10, m7: 10, m8: 5, m9: 5, m10: 6, m12: 5, m14: 5, m15: 6, m18: 5, m19: 3, m20: 5, m21: 10, m22: 10, m23: 5, m24: 5 } },
+			  { n: "Mandarina", c: "frutas", u: "gr", g: { m1: 57.14, m3: 57.14, m4: 85.71, m5: 85.71, m10: 85.71, m11: 85.71, m15: 85.71, m16: 85.71, m19: 85.71, m21: 85.71 } },
+			  { n: "Mango", c: "frutas", u: "gr", g: { m4: 120, m8: 120, m9: 120, m10: 120, m11: 120, m14: 120, m15: 120, m16: 80, m17: 120, m18: 120, m19: 120, m24: 120 } },
+			  { n: "Manzana", c: "frutas", u: "gr", g: { m5: 70.59, m19: 70.59 } },
+			  { n: "Melon", c: "frutas", u: "gr", g: { m12: 120, m17: 120, m22: 120 } },
+			  { n: "Mora", c: "frutas", u: "gr", g: { m2: 22.22, m10: 22.22, m13: 22.22, m16: 22.22, m24: 22.22 } },
+			  { n: "Naranja", c: "frutas", u: "gr", g: { m4: 100, m6: 100, m8: 100, m9: 66.67, m14: 100, m15: 100, m18: 100, m24: 200 } },
+			  { n: "Papaya", c: "frutas", u: "gr", g: { m1: 57.14, m2: 85.71, m3: 57.14, m7: 85.71, m9: 28.57, m10: 57.14, m12: 85.71, m20: 85.71, m21: 85.71, m22: 85.71, m24: 57.14 } },
+			  { n: "Pera", c: "frutas", u: "gr", g: { m22: 70.6 } },
+			  { n: "Piña", c: "frutas", u: "gr", g: { m2: 109.09, m3: 109.09, m6: 109.09, m8: 72.73, m9: 109.09, m13: 72.73, m14: 109.09, m18: 109.09, m20: 109.91, m23: 72.73, m24: 109.09 } },
+			  { n: "Sandia", c: "frutas", u: "gr", g: { m7: 150, m12: 100, m13: 150, m20: 150, m23: 150 } }
+
+			]
+        },
+        gaitana: {
+            titulo: "Regional Gaitana",
+            db: [
+              { "n": "Aceite de soya", "c": "granos", "u": "ml", "g": { "m1": 14, "m2": 12, "m3": 14, "m4": 12, "m5": 8, "m6": 10, "m7": 9, "m8": 12, "m9": 10, "m10": 6,"m11":14, "m12":13, "m13":9, "m14":13, "m15":8, "m16":13, "m17":17, "m18":14, "m19":14, "m20":12 } },
+			  { "n": "Arroz", "c": "granos", "u": "gr", "g": { "m1": 23, "m2": 23, "m3": 23, "m4": 23, "m5": 23, "m6": 23, "m7": 23, "m8": 23,"m10": 23, "m11":23, "m12":23, "m13":23, "m15":23, "m16":23, "m17":23, "m18":23, "m19":23, "m20":23 } },
+			  { "n": "Arveja seca", c: "granos", u: "gr", "g": {"m19":25} },			  
+			  { "n": "Ajonjoli", "c": "granos", "u": "gr", "g": { "m10": 23} },
+			  { "n": "Avena", "c": "granos", "u": "gr", "g": { "m2": 10, "m6": 10,"m16":10, "m19":10} },
+			  { "n": "Azúcar", "c": "granos", "u": "gr", "g": { "m2": 6, "m4": 6, "m6": 3, "m8": 8, "m9": 3, "m10": 3, "m11":11, "m12":3, "m14":5, "m15":10, "m16":4, "m18":6, "m19":3, "m20":3 } },
+			  { "n": "Cocoa", "c": "granos", "u": "gr", "g": { "m3": 4, "m12":6, "m17":6} },
+			  { "n": "Cebada", "c": "granos", "u": "gr", "g": { "m8": 8, "m14":10} },
+			  { "n": "Frijol", "c": "granos", "u": "gr", "g": { "m3": 10, "m18":10} },
+			  { "n": "Harina de maíz", "c": "granos", "u": "gr", "g": { "m2": 25, "m4": 25, "m6": 25, "m8": 25, "m11":25, "m12":25, "m13":25, "m15":25, "m16":25, "m20":25} },
+			  { "n": "Harina de trigo", "c": "granos", "u": "gr", "g": { "m3": 20, "m5": 10, "m9": 25, "m11":25, "m17":45, "m19":25, "m20":5} },
+			  { "n": "Lenteja", "c": "granos", "u": "gr", "g": { "m8": 7, "m15":10} },
+			  { "n": "Maíz trillado", "c": "granos", "u": "gr", "g": { "m1": 10, "m7": 10,} },
+			  { "n": "Panela", "c": "granos", "u": "gr", "g": { "m1": 4, "m2": 4, "m4": 4, "m5": 4, "m7": 4, "m8": 4, "m10": 4, "m13":5, "m14":6, "m16":2, "m19":3, "m20":4 } },
+			  { "n": "Pasta Fideos", "c": "granos", "u": "gr", "g": { "m2": 3, "m8": 3, "m20":5} },
+			  { "n": "Pasta Spaquetis", "c": "granos", "u": "gr", "g": { "m9": 18, "m14":23} },
+			  { "n": "Pasta Tornillo", "c": "granos", "u": "gr", "g": { "m19": 23} },
+			  { "n": "Pasta Sopa de Letras", "c": "granos", "u": "gr", "g": { "m10": 10} },
+			  { "n": "Sal", "c": "granos", "u": "gr", "g": { "m1": 3, "m2": 3, "m3": 3, "m4": 3, "m5": 3, "m6": 3, "m7": 3, "m8": 3, "m9": 3, "m10": 3, "m11":2, "m12":2, "m13":2, "m14":2, "m15":2, "m16":2, "m17":2, "m18":2, "m19":2, "m20":2 } },
+			  { "n": "Aguacate", "c": "verduras", "u": "gr", "g": { "m3": 38.96, "m10": 19.48, "m18":25.97} },
+			  { "n": "Arracacha", "c": "verduras", "u": "gr", "g": { "m17": 18.75} },
+			  { "n": "Apio", "c": "verduras", "u": "gr", "g": { "m11": 10} },
+			  { "n": "Ahuyama", "c": "verduras", "u": "gr", "g": { "m5": 35.29, "m11":11.7} },
+			  { "n": "Ajo", "c": "verduras", "u": "gr", "g": { "m5": 1.05, "m6": 1.05, "m7": 1.05, "m9": 1.05, "m10": 1.05, "m11":0.52, "m15":0.52, "m16":1.05, "m17":0.5, "m18":0.5, "m20":1.05} },
+			  { "n": "Arveja Cascara", "c": "verduras", "u": "gr", "g": { "m2": 12.5, "m4": 5, "m6": 12.5, "m7": 7.5, "m13":10, "m16":12.5} },
+			  { "n": "Cebolla cabezona", "c": "verduras", "u": "gr", "g": { "m1": 31.58, "m2": 21.05, "m3": 7.37, "m4": 10.53, "m5": 10.53, "m6": 10.53, "m7": 26.32, "m8": 15.79, "m9": 21.05, "m10": 10.53, "m11":10.5, "m12":15.7, "m13":10.5, "m14":10.52, "m15":15.78, "m16":10.5, "m18":25.78, "m19":5.26 } },
+			  { "n": "Cebolla larga", "c": "verduras", "u": "gr", "g": { "m3": 13.33, "m6": 11.11, "m7": 6.67, "m8": 6.67, "m10": 6.67, "m11":15, "m12":27.5, "m13":27.5, "m14":17.5, "m15":2.5, "m16":20.2, "m17":12.5, "m19":17.5} },
+			  { "n": "Cilantro", "c": "verduras", "u": "gr", "g": { "m3": 2.22,"m7": 2.22,"m8": 2.22,"m9": 2.22, "m11":3.33, "m13":3.33, "m15":3.33, "m17":2.22, "m18":3.33, "m19":3.33 } },
+			  { "n": "espinaca", "c": "verduras", "u": "gr", "g": { "m17":16.66 } },
+			  { "n": "Habichuela", "c": "verduras", "u": "gr", "g": { "m6": 11.11, "m13":16.6, "m16":16.66, "m19":11.11} },
+			  { "n": "Lechuga", "c": "verduras", "u": "gr", "g": { "m2": 36.36, "m7": 18.18, "m12":27.2, "m17":18.18, "m18":9.09} },
+			  { "n": "Papa criolla", "c": "verduras", "u": "gr", "g": { "m2": 25} },
+			  { "n": "Papa Pastusa", "c": "verduras", "u": "gr", "g": { "m1": 27.78, "m3": 33.33,"m7": 27.78, "m11":15, "m12":30, "m13":30, "m17":33.33} },
+			  { "n": "Pepino", "c": "verduras", "u": "gr", "g": { "m1": 26.67} },
+			  { "n": "plátano maduro", "c": "verduras", "u": "gr", "g": { "m3": 27.78, "m5": 41.67, "m7": 34.72, "m10": 27.78, "m15":41.66, "m16":41.66, "m19":41.66, "m20":41.66} },
+			  { "n": "Plátano verde", "c": "verduras", "u": "gr", "g": { "m4": 44.12, "m6": 36.76, "m9": 36.76, "m11":22, "m14":44.11, "m18":36.76} },
+			  { "n": "Remolacha", "c": "verduras", "u": "gr", "g": { "m9": 18.75, "m20":25} },
+			  { "n": "Repollo", "c": "verduras", "u": "gr", "g": { "m4": 21.43, "m15":21.42} },
+			  { "n": "Tomate", "c": "verduras", "u": "gr", "g": { "m1": 37.5, "m2": 18.75, "m3": 20, "m4": 12.5, "m6": 12.5, "m7": 25, "m8": 48.75, "m9": 12.5, "m10": 12.5, "m11":25, "m12":43.75, "m13":6.25, "m14":37.5, "m15":18.75, "m16":22.5, "m18":56.25, "m19":8.75 } },
+			  { "n": "Yuca", "c": "verduras", "u": "gr", "g": { "m1": 37.5, "m7": 25, "m10": 31.25, "m11":5.88, "m14":31.25, "m18":37.5	 } },
+			  { "n": "Zanahoria", "c": "verduras", "u": "gr", "g": { "m2": 17.65,"m6": 11.76, "m7": 5.88, "m8": 4.71, "m9": 17.65, "m12":5.88, "m13":17.64, "m14":17.64, "m15":11.76, "m16":17.64, "m17":5.88, "m19":11.76, "m20":23.5} },
+			  { "n": "Banano", "c": "frutas", "u": "gr", "g": { "m1": 85.71, "m5": 85.71, "m7": 71.43, "m10": 42.86, "m12":85.7, "m14":85.71, "m16":85.71, "m17":85.71} },
+			  { "n": "Guayaba", "c": "frutas", "u": "gr", "g": {"m13":26.6, "m20":80} },
+			  { "n": "Fresa", "c": "frutas", "u": "gr", "g": { "m4": 10.53, "m10": 21.05, "m18":21} },
+			  { "n": "Limon", "c": "frutas", "u": "gr", "g": { "m10": 2} },
+			  { "n": "Lulo", "c": "frutas", "u": "gr", "g": {"m11":100, "m19":100} },
+			  { "n": "Mandarina", "c": "frutas", "u": "gr", "g": { "m1": 85.71, "m9": 85.71, "m11":85.7, "m13":57.14, "m14":85.7, "m17":85.7, "m18":57.14} },
+			  { "n": "Mango", "c": "frutas", "u": "gr", "g": { "m2": 120, "m4": 120, "m8": 120, "m9": 120, "m17":40, "m18":120, "m20":120} },
+			  { "n": "Manzana", "c": "frutas", "u": "gr", "g": { "m3": 70.59, "m15":70.5} },
+			  { "n": "Maracuya", "c": "frutas", "u": "gr", "g": { "m4": 187.5, "m4": 187.5, "m16":187.5} },
+			  { "n": "Melon", "c": "frutas", "u": "gr", "g": { "m3": 120, "m6": 120, "m9": 120, "m13":120} },
+			  { "n": "Mora", "c": "frutas", "u": "gr", "g": { "m2": 66.67, "m15":66.66} },
+			  { "n": "Naranja", "c": "frutas", "u": "gr", "g": { "m3": 100, "m6": 86.33, "m12":100, "m13":100, "m14":100, "m16":100, "m18":100} },
+			  { "n": "Papaya", "c": "frutas", "u": "gr", "g": { "m2": 85.71, "m4": 85.71, "m5": 85.71, "m6": 85.71, "m8": 85.71, "m10": 85.71, "m11":85.7, "m15":57.14, "m19":85.7} },
+			  { "n": "Pera", "c": "frutas", "u": "gr", "g": { "m5": 70.59, "m19":70.5} },
+			  { "n": "Piña", "c": "frutas", "u": "gr", "g": { "m4": 27.27, "m7": 90.91, "m12":109, "m15":36.36, "m17":109, "m20":109.09} },
+			  { "n": "Sandia", "c": "frutas", "u": "gr", "g": { "m1": 150, "m7": 150} },
+			  { "n": "Tomate de árbol", "c": "frutas", "u": "gr", "g": { "m8": 58.14} },
+			  { "n": "Huevo", "c": "proteinas", "u": "und", "g": { "m1": 60,"m3": 60,"m4": 60,"m5": 60,"m6": 60,"m7": 60,"m9": 60,"m10": 60,"m11":67.22, "m12":60, "m13":60, "m14":60, "m16":60, "m17":65.55, "m19":60, "m20":60} },
+			  { "n": "Molleja", "c": "proteinas", "u": "GRS", "g": { "m6": 40, "m16":40} },
+			  { "n": "Higado", "c": "proteinas", "u": "GRS", "g": {"m13":40} },
+			  { "n": "Pechuga", "c": "proteinas", "u": "GRS", "g": { "m1": 43.01,"m2": 26.88,"m5": 43.01,"m7": 43.01,"m8": 26.88, "m11":43.01, "m15":43.01, "m17":43.01, "m19":43.01} },
+              { "n": "Carne de Cerdo", "c": "proteinas", "u": "GRS", "g": { "m3": 40, "m8": 40, "m12":40, "m14":40, "m18":25} },
+			  { "n": "Carne de Res", "c": "proteinas", "u": "GRS", "g": { "m2": 40, "m4": 40, "m9": 40, "m15":25, "m18":40} },
+			  { "n": "Tilapia", "c": "proteinas", "u": "GRS", "g": { "m10": 48.39, "m20":64.5} },
+			  { "n": "Queso", "c": "proteinas", "u": "GRS", "g": { "m4": 10, "m9": 10, "m11":10, "m12":10, "m13":5, "m15":10, "m16":10, "m20": 10,} },
+			  { "n": "kumis", "c": "lacteos", "u": "und 150 cc", "g": { "m1": 1,"m5": 1,"m10": 1, "m13":1} },
+			  { "n": "yogurt", "c": "lacteos", "u": "und 150 cc", "g": { "m3": 1,"m6": 1,"m9": 1,"m11":1, "m18":1} },
+			  { "n": "Leche", "c": "lacteos", "u": "ml", "g": { "m1": 170,"m2": 300,"m3": 150,"m4": 300,"m5": 150,"m6": 150,"m7": 300,"m8": 300,"m9": 150,"m10": 150, "m11":150, "m12":300, "m13":150, "m14":300, "m15":300, "m16":300, "m17":310, "m18":150, "m19":300, "m20":300} },
+			  { "n": "Cucas", c: "panaderia", u: "und", g: { "m5": 1, "m13":1, "m15":1, "m20":1} },
+			  { "n": "Pan Blanco", c: "panaderia", u: "und", g: { "m5": 1, "m6": 1, m7: 1, "m12":1} },
+			  { "n": "Pan dulce", c: "panaderia", u: "und", g: { "m1": 1, "m10": 1, "m14":1, "m18":1} },
+			  { "n": "Pan de yuca", c: "panaderia", u: "und", g: { "m8": 1} },
+			  { "n": "Pandebono", c: "panaderia", u: "und", g: { "m4": 1,"m9": 1, "m16":1} },
+			  { "n": "Pan de yuca", c: "panaderia", u: "und", g: { "m8": 1} },
+			  { "n": "Ponque", c: "panaderia", u: "und", g: { "m2": 1} }
+			]
+        }
+    };
+
+
+    function redondearComercial(gramos, unidad) {
+        if (unidad !== 'gr') return gramos.toFixed(1) + " " + unidad;
+        const cuartoLibra = 125;
+        const unidadesCuartos = Math.ceil(gramos / cuartoLibra);
+        const totalGramos = unidadesCuartos * cuartoLibra;
+        const libras = totalGramos / 500;
+        if (libras === 0.25) return "1/4 Lb (125g)";
+        if (libras === 0.5) return "1/2 Lb (250g)";
+        if (libras === 1) return "1 Lb (500g)";
+        if (libras % 1 === 0) return `${libras} Lb (${totalGramos}g)`;
+        return `${libras.toFixed(2)} Lb (${totalGramos}g)`;
+    }
+
+    function generar() {
+        const regionalActual = document.getElementById('regional-choice').value;
+        const dbActual = regionales[regionalActual].db;
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('off'));
+        const sem = parseInt(document.getElementById('sem').value);
+        const personas = parseInt(document.getElementById('num-p').value) || 0;
+        const checks = document.querySelectorAll('.d-ch:checked');
+        
+        if(checks.length === 0) return alert("Selecciona al menos un día");
+
+        let resumen = {};
+        checks.forEach(ch => {
+            const mId = `m${((sem - 1) * 5) + parseInt(ch.value)}`;
+            dbActual.forEach(p => {
+                const baseIndividual = (p.g[mId] || 0);
+                const cantTotal = baseIndividual * personas;
+                if(cantTotal > 0) {
+                    if(!resumen[p.n]) resumen[p.n] = { qTotal: 0, qIndividual: 0, u: p.u, c: p.c };
+                    resumen[p.n].qTotal += cantTotal;
+                    resumen[p.n].qIndividual += baseIndividual;
+                }
+            });
+        });
+
+        let html = `<table><thead><tr><th>Producto</th><th>Gramaje x 1</th><th>Total Real</th><th>Sugerido</th><th style="background:#2980b9;color:white;">ENTREGA REAL</th></tr></thead><tbody>`;
+        
+        Object.entries(resumen).sort((a, b) => (ORDEN_CATEGORIAS[a[1].c] || 99) - (ORDEN_CATEGORIAS[b[1].c] || 99))
+        .forEach(([name, data]) => {
+            const idRef = `${regionalActual}_${name.replace(/\s/g, '')}`;
+            const valorPrevio = memoriaEntrega[idRef] || "";
+            html += `<tr class="row-cat-${data.c}">
+                <td><div class="color-tag cat-${data.c}"></div>${name}</td>
+                <td class="val-unitario">${data.qIndividual.toFixed(1)} ${data.u}</td>
+                <td><b>${data.qTotal.toFixed(1)} ${data.u}</b></td>
+                <td><span class="redondeo-badge">${redondearComercial(data.qTotal, data.u)}</span></td>
+                <td><input type="text" class="input-entrega" value="${valorPrevio}" oninput="memoriaEntrega['${idRef}'] = this.value; localStorage.setItem('datosEntregaMultiregional', JSON.stringify(memoriaEntrega))" placeholder="..."></td>
+            </tr>`;		
+        });
+        
+        html += `</tbody></table>`;
+        document.getElementById('resultado').innerHTML = html;
+    }
+
+    function toggleCategory(btn, cat) {
+        btn.classList.toggle('off');
+        document.querySelectorAll(`.row-cat-${cat}`).forEach(f => f.style.display = btn.classList.contains('off') ? 'none' : '');
+    }
+
+	function cambiarRegional() {
+		const choice = document.getElementById('regional-choice').value;
+		const barra = document.getElementById('barra-regional');
+		const tituloElemento = document.getElementById('titulo-regional');
+		const cuerpo = document.body;
+		
+		// 1. Actualizar el texto del título
+		tituloElemento.innerText = "📋 Lista de Mercado " + regionales[choice].titulo;
+		
+		// 2. Limpiar la tabla de resultados
+		document.getElementById('resultado').innerHTML = ""; 
+
+		// 3. Aplicar clases dinámicas al body y elementos principales
+		if (choice === 'neiva') {
+			// Modo Azul
+			cuerpo.className = 'reg-neiva';
+			barra.className = 'regional-selector no-pdf reg-neiva';
+			tituloElemento.className = 'reg-neiva';
+		} else {
+			// Modo Verde
+			cuerpo.className = 'reg-gaitana';
+			barra.className = 'regional-selector no-pdf reg-gaitana';
+			tituloElemento.className = 'reg-gaitana';
+		}
+	}
+
+// Ejecutar una vez al cargar para aplicar el estilo inicial
+window.onload = cambiarRegional;	
+
+    function exportPDF() {
+        const element = document.getElementById('printable-area');
+        html2pdf().set({ margin: 5, filename: 'lista_mercado.pdf', html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(element).save();
+    }
+
+    function exportExcel() {
+		// Validar que existan datos en la tabla antes de exportar
+		const filas = document.querySelectorAll("tbody tr");
+		if (filas.length === 0) {
+			alert("Primero debes generar la lista antes de exportar.");
+			return;
+		}
+
+		const semana = document.getElementById('sem').value;
+		const dataExcel = [];
+
+		filas.forEach(tr => {
+			// Solo exportar si la fila es visible (por si tienes filtros activos)
+			if (tr.style.display !== 'none') {
+				dataExcel.push({
+					"Producto": tr.cells[0].innerText,
+					"Gramaje x 1 Niño": tr.cells[1].innerText,
+					"Gramaje Total Real": tr.cells[2].innerText,
+					"Compra Sugerida (Redondeo)": tr.cells[3].innerText,
+					"ENTREGA REAL": tr.querySelector("input").value || "0"
+				});
+			}
+		});
+
+		// Crear el libro de Excel
+		const ws = XLSX.utils.json_to_sheet(dataExcel);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Lista de Mercado");
+
+		// Descargar el archivo
+		XLSX.writeFile(wb, `Lista_Mercado_Semana_${semana}.xlsx`);
+	}
+
+    function limpiar() {
+        if(confirm('¿Limpiar datos?')) { localStorage.clear(); location.reload(); }
+    }
+</script>
+</body>
+</html>
