@@ -5,6 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
+import android.os.CancellationSignal;
+import android.os.ParcelFileDescriptor;
+import android.print.PageRange;
+import android.print.PrintDocumentInfo;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
@@ -16,6 +21,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -39,12 +45,67 @@ public class ZanOpenPlugin extends Plugin {
 
     @PluginMethod
     public void print(final PluginCall call) {
+        final Double w = call.getDouble("w");
+        final Double h = call.getDouble("h");
         getActivity().runOnUiThread(() -> {
             try {
                 PrintManager pm = (PrintManager) getActivity().getSystemService(Context.PRINT_SERVICE);
                 WebView wv = getBridge().getWebView();
                 PrintDocumentAdapter ad = wv.createPrintDocumentAdapter("ZAN_READER");
-                pm.print("ZAN_READER", ad, new PrintAttributes.Builder().build());
+                PrintAttributes.Builder pb = new PrintAttributes.Builder();
+                if (w != null && h != null && w > 0 && h > 0) {
+                    int a = (int) Math.round(Math.min(w, h) / 72 * 1000);
+                    int b = (int) Math.round(Math.max(w, h) / 72 * 1000);
+                    PrintAttributes.MediaSize ms = new PrintAttributes.MediaSize("zan_original", "Tamaño original", a, b);
+                    pb.setMediaSize(w > h ? ms.asLandscape() : ms);
+                    pb.setMinMargins(PrintAttributes.Margins.NO_MARGINS);
+                }
+                pm.print("ZAN_READER", ad, pb.build());
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("print_failed");
+            }
+        });
+    }
+
+    /** Imprime el PDF original, sin volver a dibujarlo, para conservar tamaño y orientación de cada página. */
+    @PluginMethod
+    public void printPdf(final PluginCall call) {
+        final String path = call.getString("path");
+        final int pages = call.getInt("pages", 0);
+        if (path == null) {
+            call.reject("sin_ruta");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            try {
+                final File f = new File(path);
+                PrintManager pm = (PrintManager) getActivity().getSystemService(Context.PRINT_SERVICE);
+                PrintDocumentAdapter ad = new PrintDocumentAdapter() {
+                    @Override
+                    public void onLayout(PrintAttributes oldA, PrintAttributes newA, CancellationSignal cs, LayoutResultCallback cb, Bundle extras) {
+                        if (cs.isCanceled()) {
+                            cb.onLayoutCancelled();
+                            return;
+                        }
+                        PrintDocumentInfo.Builder bd = new PrintDocumentInfo.Builder(f.getName()).setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT);
+                        if (pages > 0) bd.setPageCount(pages);
+                        cb.onLayoutFinished(bd.build(), true);
+                    }
+
+                    @Override
+                    public void onWrite(PageRange[] ranges, ParcelFileDescriptor dest, CancellationSignal cs, WriteResultCallback cb) {
+                        try (InputStream in = new FileInputStream(f); OutputStream os = new FileOutputStream(dest.getFileDescriptor())) {
+                            byte[] buf = new byte[65536];
+                            int n;
+                            while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+                            cb.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
+                        } catch (Exception e) {
+                            cb.onWriteFailed(e.toString());
+                        }
+                    }
+                };
+                pm.print(f.getName(), ad, null);
                 call.resolve();
             } catch (Exception e) {
                 call.reject("print_failed");

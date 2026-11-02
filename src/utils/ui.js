@@ -13,3 +13,6 @@ export function pinch(view,box,o){let d0=0,z0=1,r=1,mx=0,my=0;const T=e=>e.touch
   if(Math.abs(r-1)<.02)return;const v=view.getBoundingClientRect(),cx=mx-v.left,cy=my-v.top,sl=view.scrollLeft,st=view.scrollTop;
   o.set(z0*r);view.scrollLeft=(sl+cx)*r-cx;view.scrollTop=(st+cy)*r-cy};
  view.addEventListener('touchend',end);view.addEventListener('touchcancel',end)}
+// Impresión: medidas a puntos (1 pt = 1/72 pulg) y una página con nombre por cada tamaño distinto.
+export const toPt=v=>{const n=parseFloat(v);return n>0?(/px$/.test(v)?n*.75:/mm$/.test(v)?n*2.8346:/cm$/.test(v)?n*28.346:/in$/.test(v)?n*72:n):0};
+export function pageCss(els,size){const m=new Map();let css='';els.forEach(el=>{const[w,h]=size(el),k=Math.round(w)+'x'+Math.round(h);if(!m.has(k)){m.set(k,'zp'+m.size);css+=`@page ${m.get(k)}{size:${w.toFixed(1)}pt ${h.toFixed(1)}pt;margin:0}`}el.style.setProperty('page',m.get(k))});return css}

@@ -6,4 +6,4 @@ export async function open(file,ctx,{lang}){
  const c=view.firstChild,set=v=>{fs=Math.min(30,Math.max(9,v));c.style.fontSize=fs+'px'};
  btn(ctx,'−',()=>set(fs-1));btn(ctx,'+',()=>set(fs+1));btn(ctx,'Ajustar',()=>c.classList.toggle('wrap'),'Ajustar líneas');
  btn(ctx,'Copiar',()=>navigator.clipboard.writeText(t).then(()=>status.textContent='Copiado'));searchBtn(ctx);
- pinch(view,()=>view.firstChild,{get:()=>fs,set,min:9,max:30});status.textContent=`${n} líneas${big?' · sin resaltado (archivo grande)':''}`;}
+ pinch(view,()=>view.firstChild,{get:()=>fs,set,min:9,max:30});ctx.print={size:[612,792],css:()=>'@page{size:612pt 792pt;margin:50pt}'};status.textContent=`${n} líneas${big?' · sin resaltado (archivo grande)':''}`;}

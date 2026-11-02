@@ -12,4 +12,4 @@ export async function open(file,ctx){
   view.innerHTML=h+'</tbody></table>';view.firstChild.style.zoom=zoom;status.textContent=`${last-r.s.r+1} de ${r.e.r-r.s.r+1} filas · ${r.e.c-r.s.c+1} columnas`}
  sel.onchange=()=>show(sel.value);
  view.onclick=e=>{const t=e.target.closest('td');if(!t)return;view.querySelector('.sel')?.classList.remove('sel');t.classList.add('sel');const x=ws[t.dataset.a];fx.value=x?(x.f?'='+x.f:x.v):''};
- pinch(view,()=>view.firstChild,{get:()=>zoom,set:v=>{zoom=Math.min(2.5,Math.max(.4,v));view.firstChild.style.zoom=zoom},min:.4,max:2.5});show(wb.SheetNames[0]);return()=>{view.onclick=null}}
+ pinch(view,()=>view.firstChild,{get:()=>zoom,set:v=>{zoom=Math.min(2.5,Math.max(.4,v));view.firstChild.style.zoom=zoom},min:.4,max:2.5});ctx.print={size:[612,792],css:()=>{const t=view.firstChild;let w=800;if(t){const z0=t.style.zoom;t.style.zoom=1;w=t.offsetWidth||800;t.style.zoom=z0}return`@page{size:612pt 792pt;margin:36pt}.xl{zoom:${Math.min(1,(612-72)/.75/w).toFixed(3)}!important}`}};show(wb.SheetNames[0]);return()=>{view.onclick=null}}
