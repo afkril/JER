@@ -4,5 +4,6 @@ const tx=async(m,fn)=>{const d=await db();return new Promise((ok,no)=>{const t=d
 export const listRecent=async()=>((await tx('readonly',s=>s.getAll()))||[]).sort((a,b)=>b.t-a.t);
 export const removeRecent=id=>tx('readwrite',s=>s.delete(id));
 export const clearRecent=()=>tx('readwrite',s=>s.clear());
-export async function addRecent(f){await tx('readwrite',s=>s.put({id:f.name+'|'+f.size,name:f.name,size:f.size,type:f.type,t:Date.now(),blob:f}));
+export async function addRecent(f){const buf=await f.arrayBuffer();if(!buf.byteLength)return; // se guardan los bytes (no el Blob): en Android un Blob guardado puede volver vacío
+ await tx('readwrite',s=>s.put({id:f.name+'|'+f.size,name:f.name,size:f.size,type:f.type,t:Date.now(),buf}));
  for(const r of (await listRecent()).slice(12))await removeRecent(r.id)}

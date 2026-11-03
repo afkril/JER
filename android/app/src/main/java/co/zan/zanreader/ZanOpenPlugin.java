@@ -154,6 +154,7 @@ public class ZanOpenPlugin extends Plugin {
         JSObject r = new JSObject();
         r.put("path", out.getAbsolutePath());
         r.put("name", name);
+        r.put("size", out.length());
         r.put("mime", a.getContentResolver().getType(u));
         pending = r;
         if (inst != null) inst.notifyListeners("fileOpened", r, true);
