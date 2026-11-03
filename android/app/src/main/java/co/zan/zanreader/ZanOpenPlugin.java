@@ -138,6 +138,11 @@ public class ZanOpenPlugin extends Plugin {
         }
         if (name == null || name.isEmpty()) name = u.getLastPathSegment() != null ? u.getLastPathSegment() : "documento";
         name = name.substring(name.lastIndexOf('/') + 1).replaceAll("[\\\\:*?\"<>|]", "_");
+        String mime = a.getContentResolver().getType(u);
+        if (name.indexOf('.') < 0 && mime != null) {
+            String e = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime);
+            if (e != null) name = name + "." + e;
+        }
 
         File dir = new File(a.getCacheDir(), "zan_open");
         dir.mkdirs();
@@ -155,7 +160,7 @@ public class ZanOpenPlugin extends Plugin {
         r.put("path", out.getAbsolutePath());
         r.put("name", name);
         r.put("size", out.length());
-        r.put("mime", a.getContentResolver().getType(u));
+        r.put("mime", mime);
         pending = r;
         if (inst != null) inst.notifyListeners("fileOpened", r, true);
     }

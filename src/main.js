@@ -32,7 +32,8 @@ async function home(){reset();cur=null;chrome(false);$('#title').textContent='ZA
   else if(c){flt=c.dataset.f;localStorage.setItem('zanFlt',flt);draw()}
   else if(e.target.id==='clr'&&confirm('¿Borrar toda la lista de recientes?')){await clearRecent();home()}}}
 async function openFile(f){
- if(!f)return;reset();const my=seq,c=ctx;cur=f;const k=detect(f);$('#title').innerHTML=nm(f.name);$('#title').title=f.name;$('#meta').textContent=`.${k.ext} · ${size(f.size)}`;chrome(true);
+ if(!f)return;reset();const my=seq,c=ctx;cur=f;$('#title').innerHTML=nm(f.name);$('#title').title=f.name;$('#meta').textContent=size(f.size);chrome(true);
+ const k=await detect(f);if(my!==seq)return;$('#meta').textContent=`.${k.ext} · ${size(f.size)}`;
  if(!f.size){c.view.innerHTML=`<div class="err"><b>${esc(f.name)} está vacío (0 KB)</b><p>La copia o la descarga no se completó. Vuelve a descargarlo o a enviarlo y ábrelo de nuevo.</p></div>`;return}
  if(!k.viewer){c.view.innerHTML=`<p class="err">${k.pending?`Los archivos .${k.ext} aún no tienen visor. Conviértelo a PDF o a su versión moderna y vuelve a abrirlo.`:`El formato .${k.ext} no es compatible.`}</p>`;return}
  if(f.size<4e7)addRecent(f).catch(()=>{});
